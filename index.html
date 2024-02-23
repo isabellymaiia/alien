@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercício do Alien</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        // Cria constantes com o tamanho de altura e largura do jogo
+        const larguraJogo = 700;
+        const alturaJogo = 600;
+
+        // Cria as configurações iniciais, como as proporções do jogo na tela e os ciclos de uma scene
+        const config = {
+            type: Phaser.AUTO,
+            width: larguraJogo,
+            height: alturaJogo,
+
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: {
+                        y: 300
+                    },
+                    //indica a região que está sendo considerada corpo do personagem e velocidade
+                    debug: true
+
+                }
+            },
+
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        // Inicia o jogo de acordo com as definições do config
+        const game = new Phaser.Game(config);
+
+
+        // variável que vai armazenar o alien (player)
+        var alien;
+        var teclado;
+        var fogo;
+        var plataforma;
+        var moeda;
+        var pontuacao = 0;
+        var placar;
+        var carro;
+        var predio;
+        var ladrao;
+
+        function preload() {
+            this.load.image('background', 'assets/bg.png');
+            this.load.image('player', 'assets/alienigena.png');
+            this.load.image('turbo_nave', 'assets/turbo.png');
+            this.load.image('plataforma_tijolo', 'assets/tijolos.png');
+            this.load.image('moeda', 'assets/moeda.png');
+            this.load.image('carro', 'assets/carro.png');
+            this.load.image('predio', 'assets/predio.png');
+            this.load.image('ladrao', 'assets/ladrao.png');
+        }
+
+        function create() {
+            // Coloca o background 
+            this.add.image(larguraJogo / 2, alturaJogo / 3.7, 'background');
+
+            // carrega a sprite de acordo com as coordenadas 0 e 0 
+            fogo = this.add.sprite(0, 0, 'turbo_nave');
+
+            // a princípio a imagem de turbo não vai aparecer até que se crie uma função para ativá-la
+            fogo.setVisible(false);
+
+            // this.physics: refere-se ao sistema de física do Phaser, que é ativado no momento da inicialização do jogo.
+            // .add: é um método do sistema de física que permite adicionar um novo sprite ao jogo com física associada.
+            // .sprite: é um método específico para criar um sprite que será afetado pelas simulações físicas do jogo
+            alien = this.physics.add.sprite(larguraJogo / 2, 0, 'player');
+            alien.body.setSize(90, 100, true);
+            alien.setCollideWorldBounds(true);
+
+            // para acessar as setas do teclado
+            teclado = this.input.keyboard.createCursorKeys();
+
+            // adiciona a plataforma
+            plataforma = this.physics.add.staticImage(larguraJogo / 2, 250, 'plataforma_tijolo');
+            this.physics.add.collider(alien, plataforma);
+
+            // adiciona um grupo de carros
+            carro = this.physics.add.staticGroup();
+
+            carro.create(600, 500, 'carro').body.setSize(100, 60, true);
+            carro.create(400, 500, 'carro').body.setSize(100, 60, true);
+
+            this.physics.add.collider(alien, carro);
+
+            //adiciona predios
+            predio = this.physics.add.staticImage(100, 490, 'predio');
+            this.physics.add.collider(alien, predio);
+
+            // adicionando moeda
+            moeda = this.physics.add.sprite(100, 250, 'moeda');
+            moeda.setCollideWorldBounds(true);
+            moeda.setBounce(0.7); // movimento de quicar
+            this.physics.add.collider(moeda, plataforma);
+            this.physics.add.collider(moeda, carro);
+            this.physics.add.collider(moeda, predio);
+
+            // adiciona ladrao
+
+            ladrao = this.physics.add.sprite(200, 0, 'ladrao');
+            ladrao.body.setSize(60, 80);
+            ladrao.setCollideWorldBounds(true);
+            this.physics.add.collider(ladrao, plataforma);
+            this.physics.add.collider(ladrao, carro);
+            this.physics.add.collider(ladrao, predio);
+
+            // adicionando placar
+            placar = this.add.text(50, 50, 'Moedas: ' + pontuacao, {
+                fontSize: '45px',
+                fill: '#495613'
+            });
+
+            this.physics.add.overlap(alien, moeda, function () {
+
+                moeda.setVisible(false); //moeda fica "invisível" quando alien colide
+
+                var posicaoMoeda_Y = Phaser.Math.RND.between(250,
+                    650) //sorteia número para coordenadas da nova moeda
+                moeda.setPosition(posicaoMoeda_Y, 100); // ajusta a posição da moeda
+
+                pontuacao += 1; // soma pontuacao
+                placar.setText('Moedas:' + pontuacao); //atualiza placar
+
+                moeda.setVisible(true); //ativa a visão da nova moeda
+
+                //faz com que o ladrão apreça e reapareça de acordo com o overlap na estrela
+                ladrao.setVisible(false); //ladrao fica "invisível" quando alien colide
+
+                var posicaoLadrao_Y = Phaser.Math.RND.between(10, 700) //sorteia número para coordenadas do novo ladrão
+                ladrao.setPosition(posicaoLadrao_Y, 100); // ajusta a posição do ladrão 
+
+                ladrao.setVisible(true); //ativa a visão da novo ladrão
+            });
+
+            //quando o alien encosta no ladrão perde uma moeda
+            this.physics.add.overlap(alien, ladrao, function () {
+                
+                ladrao.setVisible(false); //ladrao fica "invisível" quando alien colide
+
+                var posicaoLadrao_Y = Phaser.Math.RND.between(10, 700) //sorteia número para coordenadas do novo ladrão
+                ladrao.setPosition(posicaoLadrao_Y, 100); // ajusta a posição do ladrão 
+
+                pontuacao -= 1; // subtrai pontuacao
+                placar.setText('Moedas:' + pontuacao); //atualiza placar
+
+                ladrao.setVisible(true); //ativa a visão da novo ladrão
+            });
+
+
+        }
+
+        function update() {
+
+            // movimento para a esquerda
+            if (teclado.left.isDown) {
+                alien.setVelocityX(-150);
+            }
+
+            // movimento para a direita
+            else if (teclado.right.isDown) {
+                alien.setVelocityX(150);
+            }
+
+            // sem movimento horizontal
+            else {
+                alien.setVelocityX(0);
+            }
+
+            // movimento para cima 
+            if (teclado.up.isDown) {
+                alien.setVelocityY(-150);
+                ativarTurbo(); // chama a função que ativa o efeito turbo
+            }
+
+            // chama a funcção que desativa a visbilidade do turbo
+            else {
+                semTurbo();
+            }
+
+            // alinha o fogo de acordo com a posição do alien
+            fogo.setPosition(alien.x, alien.y + alien.height / 2);
+
+        }
+
+        function ativarTurbo() {
+            fogo.setVisible(true);
+        }
+
+        function semTurbo() {
+            fogo.setVisible(false);
+        }
+    </script>
+</body>
+
+</html>
